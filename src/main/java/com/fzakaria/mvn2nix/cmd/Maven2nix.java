@@ -30,6 +30,7 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.Callable;
 import java.util.stream.Collectors;
+import sun.net.www.protocol.file.FileURLConnection;
 
 @Command(name = "mvn2nix", mixinStandardHelpOptions = true, version = "mvn2nix 0.1",
         description = "Converts Maven dependencies into a Nix expression.")
@@ -100,7 +101,7 @@ public class Maven2nix implements Callable<Integer> {
                                             .orElseThrow(() -> new IllegalStateException("Should never happen"));
 
                                     String sha256 = calculateSha256OfFile(localArtifact);
-                                    return new MavenArtifact(url, artifact.getLayout(), sha256);
+                                    return new MavenArtifact(url.getProtocol().equals("file") ? null : url, artifact.getLayout(), sha256);
                                 }
                                 throw new RuntimeException(String.format("Could not find artifact %s in any repository", artifact));
                             }
@@ -156,18 +157,19 @@ public class Maven2nix implements Callable<Integer> {
     public static boolean doesUrlExist(URL url) {
         try {
             URLConnection urlConnection = url.openConnection();
-            if (!(urlConnection instanceof HttpURLConnection)) {
-                return false;
-            }
+            if (urlConnection instanceof HttpURLConnection) {
+                HttpURLConnection connection = (HttpURLConnection) urlConnection;
+                connection.setRequestMethod("HEAD");
+                connection.setInstanceFollowRedirects(true);
+                connection.connect();
 
-            HttpURLConnection connection = (HttpURLConnection) urlConnection;
-            connection.setRequestMethod("HEAD");
-            connection.setInstanceFollowRedirects(true);
-            connection.connect();
-
-            int code = connection.getResponseCode();
-            if (code == 200) {
-                return true;
+                int code = connection.getResponseCode();
+                if (code == 200) {
+                    return true;
+                }
+            } else if (urlConnection instanceof FileURLConnection) {
+                File file = new File(url.getPath());
+                return file.exists() && !file.isDirectory();
             }
         } catch (IOException e) {
             throw new UncheckedIOException(e);

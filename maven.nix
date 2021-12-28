@@ -7,13 +7,17 @@ with lib; rec {
   # 	mvn package --offline -Dmaven.repo.local=${repository}
   #
   # @param dependencies: A attrset of dependencies to build the repository
-  buildMavenRepository = { dependencies }:
+  buildMavenRepository = { dependencies, drvDependencies ? [] }:
     let
+      findDrvDependency = layout: findFirst 
+          (d: d.layout == dependency.layout) 
+            (abort "no url or derivation dependency for ${dependency.layout}") 
+            drvDependencies;
       dependenciesAsDrv = (forEach (attrValues dependencies) (dependency: {
-        drv = fetchurl {
+        drv = if hasAttr "url" dependency then fetchurl {
           url = dependency.url;
           sha256 = dependency.sha256;
-        };
+        } else (findDrvDependency dependency.layout).drv;
         layout = dependency.layout;
       }));
     in linkFarm "mvn2nix-repository" (forEach dependenciesAsDrv (dependency: {
@@ -28,8 +32,8 @@ with lib; rec {
   # 	mvn package --offline -Dmaven.repo.local=${repository}
   #
   # @param file: A path to a file containing the JSON output of running mvn2nix
-  buildMavenRepositoryFromLockFile = { file }:
+  buildMavenRepositoryFromLockFile = { file, drvDependencies ? [] }:
     let
       dependencies = (builtins.fromJSON (builtins.readFile file)).dependencies;
-    in buildMavenRepository { inherit dependencies; };
+    in buildMavenRepository { inherit dependencies drvDependencies; };
 }
