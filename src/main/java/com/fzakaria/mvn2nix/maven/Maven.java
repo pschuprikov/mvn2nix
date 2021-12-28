@@ -25,6 +25,8 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Map;
+import java.util.Properties;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
@@ -89,12 +91,20 @@ public class Maven {
         return Optional.of(file);
     }
 
-    public void executeGoals(File pom, File javaHome, String... goals) throws MavenInvocationException {
+    public void executeGoals(File pom, File javaHome, String[] goals, String[] profiles, Map<String, String> propertiesMap) throws MavenInvocationException {
         InvocationRequest request = new DefaultInvocationRequest();
         request.setGoals(Lists.newArrayList(goals));
         request.setBatchMode(true);
         request.setPomFile(pom);
         request.setJavaHome(javaHome);
+        if (profiles != null) {
+            request.setProfiles(Lists.newArrayList(profiles));
+        }
+        if (propertiesMap != null) {
+            Properties properties = new Properties();
+            properties.putAll(propertiesMap);
+            request.setProperties(properties);
+        }
 
         /*
          * Load a custom settings.xml file that sets ~/.m2/repository as a remote repo.

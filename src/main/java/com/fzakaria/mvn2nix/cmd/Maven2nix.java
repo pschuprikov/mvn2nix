@@ -27,6 +27,7 @@ import java.net.URL;
 import java.net.URLConnection;
 import java.util.Collection;
 import java.util.Map;
+import java.util.Properties;
 import java.util.concurrent.Callable;
 import java.util.stream.Collectors;
 
@@ -62,6 +63,16 @@ public class Maven2nix implements Callable<Integer> {
             description = "The JDK to use when running Maven",
             defaultValue = "${java.home}")
     private File javaHome;
+
+    @Option(names = "--profiles",
+            arity = "1..*",
+            description = "The set of maven profiles to activate")
+    private String[] profiles;
+
+    @Option(names = "--property",
+            description = "Java properties for maven run")
+    private Map<String, String> properties;
+
     
     public Maven2nix() {
     }
@@ -71,7 +82,7 @@ public class Maven2nix implements Callable<Integer> {
         LOGGER.info("Reading {}", file);
 
         final Maven maven = Maven.withTemporaryLocalRepository();
-        maven.executeGoals(file, javaHome, goals);
+        maven.executeGoals(file, javaHome, goals, profiles, properties);
 
         Collection<Artifact> artifacts = maven.collectAllArtifactsInLocalRepository();
         Map<String, MavenArtifact> dependencies = artifacts.parallelStream()
