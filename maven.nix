@@ -10,8 +10,8 @@ with lib; rec {
   buildMavenRepository = { dependencies, drvDependencies ? [] }:
     let
       findDrvDependency = layout: findFirst 
-          (d: d.layout == dependency.layout) 
-            (abort "no url or derivation dependency for ${dependency.layout}") 
+          (d: d.layout == layout) 
+            (abort "no url or derivation dependency for ${layout}") 
             drvDependencies;
       dependenciesAsDrv = (forEach (attrValues dependencies) (dependency: {
         drv = if hasAttr "url" dependency then fetchurl {
